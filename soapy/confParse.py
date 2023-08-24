@@ -881,7 +881,7 @@ class TelConfig(ConfigObj):
                         ("mask", "circle"),
                         ("jitterFile", None)
                         ]
-    calculatedParams = [  ]
+    calculatedParams = [ "position_x", "position_y" ]
 
     allowedAttrs = copy.copy(requiredParams + calculatedParams + CONFIG_ATTRIBUTES)
     for p in optionalParams:

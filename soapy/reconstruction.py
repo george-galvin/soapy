@@ -291,7 +291,7 @@ class Reconstructor(object):
                     wfs.config.eReadNoise = 0
 
                 iMat[i, n_wfs_measurments: n_wfs_measurments+wfs.n_measurements] = (
-                        -1 * wfs.frame(None, phase_correction=phase, iMatFrame=True))# / dm.dmConfig.iMatValue
+                        -1 * wfs.frame(None, None, phase_correction=phase, iMatFrame=True))# / dm.dmConfig.iMatValue
                 n_wfs_measurments += wfs.n_measurements
 
                 # Turn noise back on again if it was turned off
