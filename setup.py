@@ -24,7 +24,8 @@ setup(
         "aotools >= 1.0",
         "pyfftw >= 0.12.0",
         "pyyaml >= 5.1.1",
-        "numba >= 0.40"
+        "numba >= 0.40",
+        "pywin32 == 306"
       ],
     classifiers=[
         "Programming Language :: Python",
