@@ -131,7 +131,8 @@ class WFS(object):
         self.telescope_diameter = self.soapy_config.tel.telDiam
         self.wavelength = self.config.wavelength
         self.threads = self.soapy_config.sim.threads
-
+        self.maxPhase = numpy.array([])
+        self.minPhase = numpy.array([])
 
         # If supplied use the mask
         if numpy.any(mask):
@@ -391,7 +392,7 @@ class WFS(object):
             # Add onto the focal plane with that layers intensity
             self.calcFocalPlane(intensity=self.lgsConfig.naProfile[i])
 
-    def frame(self, scrns, phase_correction=None, read=True, iMatFrame=False):
+    def frame(self, scrns, jitter, phase_correction=None, read=True, iMatFrame=False):
         '''
         Runs one WFS frame
 
@@ -432,6 +433,9 @@ class WFS(object):
         else:
 
             self.uncorrectedPhase = self.los.phase.copy()/self.los.phs2Rad
+            if numpy.ptp(self.uncorrectedPhase) > 0:
+                self.maxPhase = numpy.append(self.maxPhase, numpy.max(self.uncorrectedPhase))
+                self.minPhase = numpy.append(self.minPhase, numpy.min(self.uncorrectedPhase))
             if phase_correction is not None:
                 self.los.performCorrection(phase_correction)
                 
@@ -443,6 +447,19 @@ class WFS(object):
         self.integrateDetectorPlane()
         if read:
             self.readDetectorPlane()
+            if jitter is not None:
+                fov_rad = self.config.subapFOV * numpy.pi / (3600 * 180)
+                fov_pixel_rad = fov_rad / self.config.pxlsPerSubap
+
+                [jitter_x, jitter_y] = -jitter 
+        
+                x = int(numpy.round(jitter_x / fov_pixel_rad))
+                y = int(numpy.round(jitter_y / fov_pixel_rad))
+
+                d = numpy.pad(self.detector, ((numpy.max([y, 0]), numpy.max([-y, 0])), (numpy.max([x, 0]), numpy.max([-x, 0]))), mode="constant")
+                self.detector = d[numpy.max([-y, 0]):numpy.min([-y, 0]) or None, numpy.max([-x, 0]):numpy.min([-x, 0]) or None]
+                self.wfsDetectorPlane = self.detector
+                
             self.calculateSlopes()
             self.zeroData(detector=False)
 

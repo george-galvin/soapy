@@ -388,6 +388,11 @@ class Sim(object):
             slopesSize+=self.wfss[nwfs].n_measurements
         slopes = numpy.zeros( (slopesSize) )
 
+        if self.config.tel.jitterFile is not None and self.iters > 0:
+            jitter = numpy.array([self.config.tel.position_x[self.iters], self.config.tel.position_y[self.iters]])
+        else:
+            jitter = None
+
         s = 0
         for nwfs in wfsList:
             #check if due to read out WFS
@@ -400,7 +405,7 @@ class Sim(object):
                 read=False
 
             slopes[s:s+self.wfss[nwfs].n_measurements] = \
-                    self.wfss[nwfs].frame(self.scrns, dmShape, read=read)
+                    self.wfss[nwfs].frame(self.scrns, jitter, dmShape, read=read)
             s += self.wfss[nwfs].n_measurements
 
         self.Twfs+=time.time()-t_wfs
@@ -520,9 +525,14 @@ class Sim(object):
         """
         t = time.time()
 
+        if self.config.tel.jitterFile is not None and self.iters > 0:
+            jitter = numpy.array([self.config.tel.position_x[self.iters], self.config.tel.position_y[self.iters]])
+        else:
+            jitter = None
+
         self.sciImgNo +=1
         for sci in xrange(self.config.sim.nSci):
-            self.sciImgs[sci] += self.sciCams[sci].frame(self.scrns, dmShape)
+            self.sciImgs[sci] += self.sciCams[sci].frame(self.scrns, jitter, dmShape)
 
             # Normalise long exposure psf
             #self.sciImgs[sci] /= self.sciImgs[sci].sum()
@@ -1222,7 +1232,7 @@ def multiWfs(scrns, wfsObj, dmShape, read, queue):
         queue (Queue object): a multiprocessing Queue object used to pass data back to host process.
     """
 
-    slopes = wfsObj.frame(scrns, dmShape, read=read)
+    slopes = wfsObj.frame(scrns, jitter, dmShape, read=read)
 
     if wfsObj.LGS:
         lgsPsf = wfsObj.LGS.psf1

@@ -295,7 +295,7 @@ class ShackHartmann(wfs.WFS):
         # Make flat wavefront, and run through WFS in iMat mode to turn off features
         phs = numpy.zeros([self.los.n_layers, self.screen_size, self.screen_size]).astype(DTYPE)
         self.staticData = self.frame(
-                phs, iMatFrame=True).copy().reshape(2, self.n_subaps)
+                phs, None, iMatFrame=True).copy().reshape(2, self.n_subaps)
 #######################################################################
 
 
