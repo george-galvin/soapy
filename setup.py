@@ -18,7 +18,7 @@ setup(
     description='A tomographic astronomical adaptive optics simulation with realistic laser guide star propagation.',
     long_description=open('README.md').read(),
     install_requires=[
-        "numpy >= 1.7.0",
+        "numpy >= 1.7.0, < 1.26",
         "scipy >= 0.15.0",
         "astropy >= 1.0",
         "aotools >= 1.0",
