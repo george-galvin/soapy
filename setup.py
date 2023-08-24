@@ -25,6 +25,10 @@ setup(
         "pyfftw >= 0.12.0",
         "pyyaml >= 5.1.1",
         "numba >= 0.40",
+        "ipython >= 8.0",
+        "pyqt5 >= 5.0",
+        "qtconsole >= 5.0",
+        "pyqtgraph >= 0.13"
       ],
     classifiers=[
         "Programming Language :: Python",
