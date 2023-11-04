@@ -292,7 +292,7 @@ class PSFCamera(object):
         return rms_wfe
 
 
-    def frame(self, scrns, correction=None):
+    def frame(self, scrns, jitter, correction=None):
         """
         Runs a single science camera frame with one or more phase screens
 
@@ -305,6 +305,17 @@ class PSFCamera(object):
         """
         self.los.frame(scrns, correction=correction)
         self.calcFocalPlane()
+
+        if jitter is not None:
+            fov_rad = self.config.FOV * numpy.pi / (3600 * 180)
+            fov_pixel_rad = fov_rad / self.config.pxls
+            [jitter_x, jitter_y] = jitter 
+
+            x = int(numpy.round(jitter_x / fov_pixel_rad))
+            y = int(numpy.round(jitter_y / fov_pixel_rad))
+
+            d = numpy.pad(self.detector, ((numpy.max([y, 0]), numpy.max([-y, 0])), (numpy.max([x, 0]), numpy.max([-x, 0]))), mode="constant")
+            self.detector = d[numpy.max([-y, 0]):numpy.min([-y, 0]) or None, numpy.max([-x, 0]):numpy.min([-x, 0]) or None]
 
         self.calcInstStrehl()
 

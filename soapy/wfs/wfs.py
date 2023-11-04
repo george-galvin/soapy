@@ -391,7 +391,7 @@ class WFS(object):
             # Add onto the focal plane with that layers intensity
             self.calcFocalPlane(intensity=self.lgsConfig.naProfile[i])
 
-    def frame(self, scrns, phase_correction=None, read=True, iMatFrame=False):
+    def frame(self, scrns, jitter, phase_correction=None, read=True, iMatFrame=False):
         '''
         Runs one WFS frame
 
@@ -443,6 +443,19 @@ class WFS(object):
         self.integrateDetectorPlane()
         if read:
             self.readDetectorPlane()
+            if jitter is not None:
+                fov_rad = self.config.subapFOV * numpy.pi / (3600 * 180)
+                fov_pixel_rad = fov_rad / self.config.pxlsPerSubap
+
+                [jitter_x, jitter_y] = -jitter 
+
+                x = int(numpy.round(jitter_x / fov_pixel_rad))
+                y = int(numpy.round(jitter_y / fov_pixel_rad))
+
+                d = numpy.pad(self.detector, ((numpy.max([y, 0]), numpy.max([-y, 0])), (numpy.max([x, 0]), numpy.max([-x, 0]))), mode="constant")
+                self.detector = d[numpy.max([-y, 0]):numpy.min([-y, 0]) or None, numpy.max([-x, 0]):numpy.min([-x, 0]) or None]
+                self.wfsDetectorPlane = self.detector
+
             self.calculateSlopes()
             self.zeroData(detector=False)
 

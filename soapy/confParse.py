@@ -238,6 +238,18 @@ class PY_Configurator(object):
             if dm.diameter is None:
                 dm.diameter = self.tel.telDiam
 
+        if self.tel.jitterFile is not None:
+            jitterPattern = numpy.load(self.tel.jitterFile)
+            x = jitterPattern["position_x"]
+            y = jitterPattern["position_y"]
+            time_step = jitterPattern["time_step"]
+
+            if time_step * len(x) >= self.sim.loopTime * self.sim.nIters:
+                self.tel.position_x = numpy.interp(numpy.arange(0, self.sim.loopTime*self.sim.nIters, self.sim.loopTime), numpy.arange(0, time_step*len(x), time_step), x)
+                self.tel.position_y = numpy.interp(numpy.arange(0, self.sim.loopTime*self.sim.nIters, self.sim.loopTime), numpy.arange(0, time_step*len(y), time_step), y)
+            else:
+                logger.warning("The telescope jitter file does not cover the entire simulation.")
+
 
     def __iter__(self):
         objs = {'Sim': dict(self.sim),
@@ -855,6 +867,8 @@ class TelConfig(ConfigObj):
                             obscuration                         ``0``
         ``mask``            str: Shape of pupil (only
                             accepts ``circle`` currently)       ``circle``
+        ``jitterFile``      str: .npz file containing           ``None``
+                            representative telescope jitter
         ==================  =================================   ===========
 
     """
@@ -864,7 +878,8 @@ class TelConfig(ConfigObj):
                             ]
 
     optionalParams = [ ("obsDiam", 0),
-                        ("mask", "circle")
+                        ("mask", "circle"),
+                        ("jitterFile", None)
                         ]
     calculatedParams = [  ]
 
