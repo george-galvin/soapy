@@ -1138,7 +1138,14 @@ class SciConfig(ConfigObj):
                              calculations.                       ``False``
         ``loadModule``       str: External module to load,       ``None``
                              where the specified science 
-                             object is stored.  
+                             object is stored.
+        ``coreDiam``         float: Core diameter of fibre for   ``None``
+                             the multiModeFibre class.
+        ``effectiveFocalLength``                                 ``None`` 
+                             float: Effective focal length
+                             of fibre for the multiModeFibre
+                             class.
+  
         ==================== =================================   ===========
 
     """
@@ -1158,7 +1165,9 @@ class SciConfig(ConfigObj):
                         ("height", 0),
                         ("propagationMode", "Geometric"),
                         ("loadModule", None),
-                        ("propagationDir", "down")
+                        ("propagationDir", "down"),
+                        ("coreDiam", None),
+                        ("effectiveFocalLength", None)
                         ]
 
     calculatedParams = [

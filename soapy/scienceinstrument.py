@@ -28,6 +28,7 @@ import scipy.optimize as opt
 import pyfftw
 
 import aotools
+from scipy.ndimage.measurements import center_of_mass
 
 from . import logger, lineofsight, numbalib, interp
 DTYPE = numpy.float32
@@ -335,6 +336,98 @@ class singleModeFibre(PSFCamera):
     def calcInstStrehl(self):
         self.instStrehl = numpy.abs(numpy.sum(self.fibre_efield * self.los.EField * self.normMask))**2
 
+class singleModeFibreNoInterp(PSFCamera):
+
+    def __init__(self, soapyConfig, nSci=0, mask=None):
+        '''
+        Override the inheritied __init__, because we don't need anything with FFTs
+        and FOV for the SMF.
+        '''
+        self.soapy_config = soapyConfig
+        self.config = self.sciConfig = self.soapy_config.scis[nSci]
+
+        self.simConfig = soapyConfig.sim
+
+        # Get some vital params from config
+        self.sim_size = self.soapy_config.sim.simSize
+        self.pupil_size = self.soapy_config.sim.pupilSize
+        self.sim_pad = self.soapy_config.sim.simPad
+        self.telescope_diameter = self.soapy_config.tel.telDiam
+        self.nx_pixels = 1 # this is a SMF so no spatial information
+
+        self.setMask(mask)
+
+        # If propagation direction is up, need to consider a mask in the optical propagation
+        # Otherwise, we'll apply it later
+        if self.config.propagationDir == "up":
+            los_mask = self.mask
+        else:
+            los_mask = None
+
+        self.los = lineofsight.LineOfSight(
+                self.config, self.soapy_config,
+                propagation_direction=self.config.propagationDir, mask=los_mask)
+
+        # detector and long exposure are single numbers for SMF (coupling efficiency)
+        self.detector = numpy.zeros((1,1))
+        self.long_exp_image = numpy.zeros((1,1))
+
+        # Strehl for the SMF will be the same as detector and long_exp_image
+        self.longExpStrehl = 0.
+        self.instStrehl = 0.
+
+        # Compute optimal coupling under diffraction limited conditions
+        self.normMask = self.mask / numpy.sqrt(numpy.sum(numpy.abs(self.mask)**2))
+        self.fibreSize = opt.minimize_scalar(self.refCouplingLoss, bracket=[1.0, self.sim_size]).x
+        self.refStrehl = 1.0 - self.refCouplingLoss(self.fibreSize)
+        self.fibre_efield = self.fibreEfield(self.fibreSize)
+        print("Coupling efficiency: {0:.3f}".format(self.refStrehl))
+
+        # for compatibility with simulation.py
+        self.psfMax = self.refStrehl
+        self.fov = 0.
+
+    def fibreEfield(self, size):
+        fibre_efield = aotools.gaussian2d(self.normMask.shape, (size, size))
+        fibre_efield /= numpy.sqrt(numpy.sum(numpy.abs(aotools.gaussian2d(3 * numpy.array(self.normMask.shape), (size, size)))**2))
+        return fibre_efield
+
+    def refCouplingLoss(self, size):
+        return 1.0 - numpy.abs(numpy.sum(self.fibreEfield(size) * self.normMask))**2
+
+    def computeCoupling(self):
+        return numpy.abs(numpy.sum(self.fibre_efield * self.los.EField * self.normMask))**2
+
+    def calcInstStrehl(self):
+        self.instStrehl = self.computeCoupling()
+
+    def calcFocalPlane(self):
+        self.detector[0,0] = self.computeCoupling()
+
+class MultiModeFibre(PSFCamera):
+    def __init__(self, soapyConfig, nSci=0, mask=None):
+
+        super().__init__(soapyConfig, nSci, mask)
+        self.core_diameter = self.config.coreDiam
+
+        self.FOV_rad = self.fov * numpy.pi / (3600 * 180) # FoV of the total camera picture
+        total_size = self.FOV_rad * self.config.effectiveFocalLength # Size in distance units
+        axis_pos = numpy.linspace(-total_size/2, total_size/2, self.nx_pixels)
+        self.r = (axis_pos**2 + axis_pos[:, numpy.newaxis]**2) ** .5
+
+    def computeCoupling(self):
+        return numpy.sum(self.detector * (self.r < self.core_diameter / 2))
+
+    def getTipTilt(self):
+        (tip, tilt) = center_of_mass(self.detector)
+        offset = (self.nx_pixels / 2) - 0.5
+        tip_tilt_radius_pxls = tip - offset #((tip-offset)**2 + (tilt-offset)**2) ** .5
+        tip_tilt_radius_rad = tip_tilt_radius_pxls * self.FOV_rad / self.nx_pixels
+        return tip_tilt_radius_rad
+
+
+    def calcInstStrehl(self):
+        self.instStrehl = self.computeCoupling()
 
 # Compatability with older versions
 scienceCam = ScienceCam = PSF = PSFCamera
